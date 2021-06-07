@@ -41,14 +41,50 @@ class SlidePuzzle:
         n = self.tiles.index(tile)
         self.tiles[n], self.opentile = self.opentile, self.tiles[n]
         
+    def in_grid(self, tile):
+        return tile[0]>=0 and tile[0]<self.gs[0] and tile[1]>=0 and tile[1]<self.gs[1]
+        # to keep mouse click out of bound
+
+    def adjacent(self):
+        x,y = self.opentile
+        return (x-1,y),(x+1,y),(x,y-1),(x,y+1)
+
     def update(self, dt):
-        pass
+        mouse = pygame.mouse.get_pressed()
+        mouse_pos = pygame.mouse.get_pos()
+
+        if(mouse[0]):
+            x,y = mouse_pos[0]%(self.ts+self.ms), mouse_pos[1]%(self.ts+self.ms)
+
+            if x>self.ms and y > self.ms:
+                tile = mouse_pos[0]//self.ts, mouse_pos[1]//self.ts
+                # tile is equals to clicked tiles
+                if self.in_grid(tile) and tile in self.adjacent(): # check if tile is adjacent with blank tile
+                    self.switch(tile)    #switch clicked with blank
 
     def draw(self, screen):
         for i in range(self.tiles_len):
             x,y = self.tilepos[self.tiles[i]]
             screen.blit(self.images[i], (x,y))
             # pygame.draw.rect(screen, GREEN, (x,y,self.ts,self.ts))  # show grid in console
+
+    def events(self, event):
+        if event.type == pygame.KEYDOWN:
+            # for key, dx, dy in ((pygame.K_w,0,-1), (pygame.K_s,0,1), (pygame.K_a,-1,0), (pygame.K_d,1,0)):
+            for key, dx, dy in ((pygame.K_w,0,1), (pygame.K_s,0,-1), (pygame.K_a,1,0), (pygame.K_d,-1,0)):
+                # wasd
+                if event.key == key:
+                    x,y = self.opentile
+                    tile = x+dx, y+dy
+                    if self.in_grid(tile): self.switch(tile)
+
+            # for key, dx, dy in ((pygame.K_UP,0,-1), (pygame.K_DOWN,0,1), (pygame.K_LEFT,-1,0), (pygame.K_RIGHT,1,0)):
+            for key, dx, dy in ((pygame.K_UP,0,1), (pygame.K_DOWN,0,-1), (pygame.K_LEFT,1,0), (pygame.K_RIGHT,-1,0)):
+                # arrow control
+                if event.key == key:
+                    x,y = self.opentile
+                    tile = x+dx, y+dy
+                    if self.in_grid(tile): self.switch(tile)
 
             
 def main():
