@@ -12,6 +12,9 @@ GREEN = (0, 255, 0)
 GAME_BACKGROUND = WHITE
 FONT_COLOR = WHITE
 FONT_SIZE = 40
+BUTTON_COLOR = GREEN
+game_start = False
+is_solved = False
 
 
 class SlidePuzzle:
@@ -34,6 +37,7 @@ class SlidePuzzle:
                         for y in range(gs[1]) for x in range(gs[0])}
         # position the tiles slide into
 
+        print(self.tilepos)
         self.rect = pygame.Rect(0, 0, gs[0]*(ts+ms)+ms, gs[1]*(ts+ms)+ms)
         pic = pygame.image.load(background_image)
         pic = pygame.transform.smoothscale(pic, self.rect.size)
@@ -72,6 +76,7 @@ class SlidePuzzle:
         # prevent add other slide before each tile in their pos
         # but allow it when we want to random it
 
+        # print('tile:',tile,'blank tile:', self.opentile)
         n = self.tiles.index(tile)
         self.tiles[n], self.opentile = self.opentile, self.tiles[n]
         self.prev = self.opentile
@@ -86,11 +91,15 @@ class SlidePuzzle:
 
     def random(self):
         self.is_random = True
-        adj = self.adjacent()
-        adj = [pos for pos in adj if self.in_grid(pos) and pos != self.prev]
-        self.switch(random.choice(adj))
+        for i in range(300):
+            adj = self.adjacent()
+            adj = [pos for pos in adj if self.in_grid(
+                pos) and pos != self.prev]
+            self.switch(random.choice(adj))
 
     def update(self, dt):
+        global game_start, is_solved
+        game_start = True
         mouse = pygame.mouse.get_pressed()
         mouse_pos = pygame.mouse.get_pos()
 
@@ -98,11 +107,21 @@ class SlidePuzzle:
             x, y = mouse_pos[0] % (
                 self.ts+self.ms), mouse_pos[1] % (self.ts+self.ms)
 
+            # print(mouse_pos)
+            if RESET_RECT.collidepoint(mouse_pos):
+                print('reset button')
+            if RANDOM_RECT.collidepoint(mouse_pos):
+                is_solved = False
+                game_start = False
+                main()
+            if SOLVE_RECT.collidepoint(mouse_pos):
+                print('solve button')
+
             if x > self.ms and y > self.ms:
                 tile = mouse_pos[0]//self.ts, mouse_pos[1]//self.ts
                 # tile is equals to clicked tiles
                 # check if tile is adjacent with blank tile
-                if self.in_grid(tile) and tile in self.adjacent():
+                if self.in_grid(tile) and tile in self.adjacent() and not is_solved:
                     self.switch(tile)  # switch clicked with blank
 
         s = self.speed*dt
@@ -120,13 +139,22 @@ class SlidePuzzle:
             self.tilepos[i] = x, y
 
     def draw(self, screen):
+        global game_start, is_solved
         for i in range(self.tiles_len):
             x, y = self.tilepos[i]
             screen.blit(self.images[i], (x, y))
+            screen.blit(RESET_SURF, RESET_RECT)
+            screen.blit(RANDOM_SURF, RANDOM_RECT)
+            screen.blit(SOLVE_SURF, SOLVE_RECT)
+            if solvedPuzzle.tiles == self.tiles:
+                is_solved = True
+                screen.blit(SOLVED_SURF, SOLVED_RECT)
             # pygame.draw.rect(screen, GREEN, (x,y,self.ts,self.ts))  # show grid in console
 
     def events(self, event):
+        global game_start, is_solved
         if event.type == pygame.KEYDOWN:
+            game_start = True
             self.is_random = False
             # for key, dx, dy in ((pygame.K_w,0,-1), (pygame.K_s,0,1), (pygame.K_a,-1,0), (pygame.K_d,1,0)):
             for key, dx, dy in ((pygame.K_w, 0, 1), (pygame.K_s, 0, -1), (pygame.K_a, 1, 0), (pygame.K_d, -1, 0)):
@@ -134,7 +162,7 @@ class SlidePuzzle:
                 if event.key == key:
                     x, y = self.opentile
                     tile = x+dx, y+dy
-                    if self.in_grid(tile):
+                    if self.in_grid(tile) and not is_solved:
                         self.switch(tile)
 
             # for key, dx, dy in ((pygame.K_UP,0,-1), (pygame.K_DOWN,0,1), (pygame.K_LEFT,-1,0), (pygame.K_RIGHT,1,0)):
@@ -143,20 +171,32 @@ class SlidePuzzle:
                 if event.key == key:
                     x, y = self.opentile
                     tile = x+dx, y+dy
-                    if self.in_grid(tile):
+                    if self.in_grid(tile) and not is_solved:
                         self.switch(tile)
 
             if event.key == pygame.K_SPACE:
-                for i in range(300):
-                    self.random()
+                self.random()
+
+
+def makeText(text, color, bgcolor, top, left):
+    # create the Surface and Rect objects for some text.
+    font = pygame.font.Font(None, FONT_SIZE)
+    textSurf = font.render(text, True, color, bgcolor)
+    textRect = textSurf.get_rect()
+    textRect.topleft = (top, left)
+    return (textSurf, textRect)
 
 
 def main():
+    global RESET_SURF, RESET_RECT, RANDOM_SURF, RANDOM_RECT, SOLVE_SURF, SOLVE_RECT, SOLVED_SURF, SOLVED_RECT
+    global tile_size, PuzzleSize, grid_margin, right_button, game_height, game_width
     tile_size = 160
-    PuzzleSize = (3, 3)
+    PuzzleSize = (4, 4)
     grid_margin = 5
+    right_button = 120
     game_height = tile_size*(PuzzleSize[0])+grid_margin*(PuzzleSize[0]+1)
-    game_width = tile_size*(PuzzleSize[1])+grid_margin*(PuzzleSize[1]+1)
+    game_width = tile_size * \
+        (PuzzleSize[1])+grid_margin*(PuzzleSize[1]+1) + 2*right_button
 
     pygame.init()
     os.environ['SDL_VIDEO_CENTERED'] = '1'
@@ -164,6 +204,21 @@ def main():
     screen = pygame.display.set_mode((game_width, game_height))
     fpsclock = pygame.time.Clock()
     program = SlidePuzzle(PuzzleSize, tile_size, grid_margin)
+    program.random()
+    global solvedPuzzle
+    solvedPuzzle = SlidePuzzle(PuzzleSize, tile_size, grid_margin)
+
+    RANDOM_SURF, RANDOM_RECT = makeText(
+        'Random', FONT_COLOR, BUTTON_COLOR, game_width - right_button*1.5, game_height - 60)
+    print('new surf, new rect', RANDOM_SURF, RANDOM_RECT)
+    SOLVE_SURF,  SOLVE_RECT = makeText(
+        'Solve',    FONT_COLOR, BUTTON_COLOR, game_width - right_button*1.5, game_height - 30)
+    print('SOLVE surf, SOLVE rect', SOLVE_SURF, SOLVE_RECT)
+    RESET_SURF,  RESET_RECT = makeText(
+        'Reset',    FONT_COLOR, BUTTON_COLOR, game_width - right_button*1.5, game_height - 90)
+    print('RESET surf, RESET rect', RESET_SURF, RESET_RECT)
+    SOLVED_SURF, SOLVED_RECT = makeText(
+        'SOLVED', FONT_COLOR, BUTTON_COLOR, game_width - right_button*1.5, 30)
 
     while True:
         dt = fpsclock.tick()/1000
