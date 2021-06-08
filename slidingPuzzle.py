@@ -1,13 +1,18 @@
-import pygame, sys, os
+import pygame, sys, os, random
 
 game_height = 800
-game_width = 600
-PuzzleSize = (3,3)
+game_width = 800
+PuzzleSize = (4,4)
 
 game_caption = 'Slide Puzzle'
+background_image = 'cropped-background-image.png'
 
 BLACK = (0,0,0)
+WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
+GAME_BACKGROUND = WHITE
+FONT_COLOR = WHITE
+FONT_SIZE = 40
 
 class SlidePuzzle:
     def __init__(self, gs, ts, ms): # grid size, tile size, margin size
@@ -19,18 +24,28 @@ class SlidePuzzle:
 
         self.tilepos = {(x, y):(x*(ts+ms)+ms,y*(ts+ms)+ms) 
             for y in range(gs[1]) for x in range(gs[0])}    # creating grid
+        
+        self.prev = None
+
+        w,h = gs[0]*(ts+ms)+ms, gs[1]*(ts+ms)+ms
+        pic = pygame.image.load(background_image)
+        pic = pygame.transform.scale(pic, (w,h))
 
         self.images = []
-        font = pygame.font.Font(None, 120)
+        font = pygame.font.Font(None, FONT_SIZE)
 
         for i in range(self.tiles_len):
-            image = pygame.Surface((ts,ts))
-            image.fill(GREEN)
+            # image = pygame.Surface((ts,ts))
+            # image.fill(GREEN)
 
-            text = font.render(str(i+1), 2, BLACK)
+            x,y = self.tilepos[self.tiles[i]]
+            image = pic.subsurface(x,y,ts,ts)
+
+            text = font.render(str(i+1), 2, FONT_COLOR)
             w,h = text.get_size()
 
-            image.blit(text, ((ts-w)/2,(ts-h)/2))   
+            # image.blit(text, ((ts-w)/2,(ts-h)/2)) # text at center of grid
+            image.blit(text, (0,0)) # text at top left of grid
             self.images += [image]
 
     def getBlank(self): return self.tiles[-1]
@@ -40,6 +55,7 @@ class SlidePuzzle:
     def switch(self, tile): # Swap blank tile with position
         n = self.tiles.index(tile)
         self.tiles[n], self.opentile = self.opentile, self.tiles[n]
+        self.prev = self.opentile
         
     def in_grid(self, tile):
         return tile[0]>=0 and tile[0]<self.gs[0] and tile[1]>=0 and tile[1]<self.gs[1]
@@ -48,6 +64,11 @@ class SlidePuzzle:
     def adjacent(self):
         x,y = self.opentile
         return (x-1,y),(x+1,y),(x,y-1),(x,y+1)
+        
+    def random(self):
+        adj = self.adjacent()
+        adj = [pos for pos in adj if self.in_grid(pos) and pos != self.prev]
+        self.switch(random.choice(adj))
 
     def update(self, dt):
         mouse = pygame.mouse.get_pressed()
@@ -86,7 +107,10 @@ class SlidePuzzle:
                     tile = x+dx, y+dy
                     if self.in_grid(tile): self.switch(tile)
 
-            
+            if event.key == pygame.K_SPACE:
+                for i in range(300): self.random()
+
+ 
 def main():
     tile_size = 160
 
@@ -100,12 +124,13 @@ def main():
     while True:
         dt = fpsclock.tick()/1000
 
-        screen.fill(BLACK)
+        screen.fill(GAME_BACKGROUND)
         program.draw(screen)
         pygame.display.flip()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT: pygame.quit(); sys.exit()
+            program.events(event)
 
         program.update(dt)
 
