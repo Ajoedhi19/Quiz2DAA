@@ -21,6 +21,7 @@ score_list = PriorityQueue()
 score_copy = []
 updated = False
 
+
 class SlidePuzzle:
     prev = None
     speed = 2000
@@ -101,7 +102,7 @@ class SlidePuzzle:
             self.switch(random.choice(adj))
 
     def update(self, dt):
-        global game_start, is_solved, current_times, updated
+        global game_start, is_solved, current_times, updated, score_list, score_copy
         game_start = True
         mouse = pygame.mouse.get_pressed()
         mouse_pos = pygame.mouse.get_pos()
@@ -146,27 +147,27 @@ class SlidePuzzle:
             score_list.put(current_times - start_time)
 
             for i in score_copy:
-                print('kok double',i)
                 score_list.put(i)
             i = 0
             score_copy.clear()
             while score_list.qsize() > 0:
                 before = i
                 i = score_list.get()
-                print('ini i', i)
                 if i < 1:
                     continue
                 if before != i:
                     score_copy.append(i)
-            print()
+            
             for i in range(5 - len(score_copy)):
                 score_copy.append(0)
-            
+
             file = open('highscore.txt', 'w')
             for i in range(5):
                 file.write(str(score_copy[i]) + '\n')
-            
+
             file.close()
+            score_copy.clear()
+            highscores()
 
     def draw(self, screen):
         global game_start, is_solved
@@ -177,8 +178,8 @@ class SlidePuzzle:
             screen.blit(RANDOM_SURF, RANDOM_RECT)
             screen.blit(SOLVE_SURF, SOLVE_RECT)
             screen.blit(TIMER_SURF, TIMER_RECT)
-            for a,b in SCORES_SCREEN:
-                screen.blit(a,b)
+            for a, b in SCORES_SCREEN:
+                screen.blit(a, b)
 
             if solvedPuzzle.tiles == self.tiles:
                 is_solved = True
@@ -213,6 +214,7 @@ class SlidePuzzle:
                 game_start = False
                 main()
 
+
 def makeText(text, color, bgcolor, top, left):
     # create the Surface and Rect objects for some text.
     font = pygame.font.Font(None, FONT_SIZE)
@@ -220,6 +222,7 @@ def makeText(text, color, bgcolor, top, left):
     textRect = textSurf.get_rect()
     textRect.topleft = (top, left)
     return (textSurf, textRect)
+
 
 def second_to_str(seconds):
     hours = (seconds//3600)
@@ -242,8 +245,9 @@ def second_to_str(seconds):
     res += seconds
     return res
 
+
 def highscores():
-    global start_time, is_solved, current_times, SCORES_SCREEN
+    global start_time, is_solved, current_times, SCORES_SCREEN, score_list, score_copy
 
     SCORES_SCREEN = []
     file = open('highscore.txt', 'r')
@@ -261,8 +265,9 @@ def highscores():
 
     for i in range(5):
         SCORES_SCREEN.append(makeText(
-                second_to_str(score_copy[i]), BLACK, WHITE, game_width - right_button*1.75, 70 + 30 * i))
+            second_to_str(score_copy[i]), BLACK, WHITE, game_width - right_button*1.75, 70 + 30 * i))
     file.close()
+
 
 def main():
     global RESET_SURF, RESET_RECT, RANDOM_SURF, RANDOM_RECT, SOLVE_SURF, SOLVE_RECT, SOLVED_SURF, SOLVED_RECT
@@ -282,13 +287,13 @@ def main():
     pygame.init()
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pygame.display.set_caption(game_caption)
-    
+
     screen = pygame.display.set_mode((game_width, game_height))
     fpsclock = pygame.time.Clock()
     program = SlidePuzzle(PuzzleSize, tile_size, grid_margin)
     program.random()
     solvedPuzzle = SlidePuzzle(PuzzleSize, tile_size, grid_margin)
-    
+
     RANDOM_SURF, RANDOM_RECT = makeText(
         'Random', FONT_COLOR, BUTTON_COLOR, game_width - right_button*1.5, game_height - 60)
     SOLVE_SURF,  SOLVE_RECT = makeText(
@@ -299,15 +304,15 @@ def main():
         'SOLVED', FONT_COLOR, BUTTON_COLOR, game_width - right_button*1.5, 35)
     start_time = time.time()
     highscores()
-    
+
     while True:
         dt = fpsclock.tick()/1000
         if not is_solved:
             current_times = time.time()
-        
+
         TIMER_SURF, TIMER_RECT = makeText(
-                second_to_str(current_times - start_time), BLACK, WHITE, game_width - right_button*1.75, 5)
-        
+            second_to_str(current_times - start_time), BLACK, WHITE, game_width - right_button*1.75, 5)
+
         screen.fill(GAME_BACKGROUND)
         program.draw(screen)
         pygame.display.flip()
