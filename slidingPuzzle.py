@@ -20,6 +20,7 @@ is_solved = False
 score_list = PriorityQueue()
 score_copy = []
 updated = False
+using_solved = False
 
 
 class SlidePuzzle:
@@ -102,7 +103,7 @@ class SlidePuzzle:
             self.switch(random.choice(adj))
 
     def update(self, dt):
-        global game_start, is_solved, current_times, updated, score_list, score_copy
+        global game_start, is_solved, current_times, updated, score_list, score_copy, using_solved
         game_start = True
         mouse = pygame.mouse.get_pressed()
         mouse_pos = pygame.mouse.get_pos()
@@ -117,9 +118,11 @@ class SlidePuzzle:
             if RANDOM_RECT.collidepoint(mouse_pos):
                 is_solved = False
                 game_start = False
+                using_solved = False
                 main()
             if SOLVE_RECT.collidepoint(mouse_pos):
-                print('solve button')
+                using_solved = True
+                self.bfs()
 
             if x > self.ms and y > self.ms:
                 tile = mouse_pos[0]//self.ts, mouse_pos[1]//self.ts
@@ -142,7 +145,7 @@ class SlidePuzzle:
 
             self.tilepos[i] = x, y
 
-        if is_solved and not updated:
+        if is_solved and not updated and not using_solved:
             updated = True
             score_list.put(current_times - start_time)
 
@@ -157,7 +160,7 @@ class SlidePuzzle:
                     continue
                 if before != i:
                     score_copy.append(i)
-            
+
             for i in range(5 - len(score_copy)):
                 score_copy.append(0)
 
@@ -213,6 +216,69 @@ class SlidePuzzle:
                 is_solved = False
                 game_start = False
                 main()
+
+    def bfs(self):
+        queue = []
+        visited = []
+        position = self.tiles.copy()
+        direction_in_queue = ""
+        while position != solvedPuzzle.tiles:
+            x, y = position[self.tiles_len]
+            # print(x,y)
+
+            tileUp = x, y+1
+            if self.in_grid(tileUp):
+                switchUp = position.copy()
+                n = position.index(tileUp)
+                switchUp[n], switchUp[self.tiles_len] = switchUp[self.tiles_len], switchUp[n]
+                if switchUp not in visited:
+                    queue.append((switchUp, direction_in_queue + 'U'))
+                    visited.append(switchUp)
+
+            tileDown = x, y-1
+            if self.in_grid(tileDown):
+                switchDown = position.copy()
+                n = position.index(tileDown)
+                switchDown[n], switchDown[self.tiles_len] = switchDown[self.tiles_len], switchDown[n]
+                if switchDown not in visited:
+                    queue.append((switchDown, direction_in_queue + 'D'))
+                    visited.append(switchDown)
+
+            tileLeft = x+1, y
+            if self.in_grid(tileLeft):
+                switchLeft = position.copy()
+                n = position.index(tileLeft)
+                switchLeft[n], switchLeft[self.tiles_len] = switchLeft[self.tiles_len], switchLeft[n]
+                if switchLeft not in visited:
+                    queue.append((switchLeft, direction_in_queue + 'L'))
+                    visited.append(switchLeft)
+
+            tileRight = x-1, y
+            if self.in_grid(tileRight):
+                switchRight = position.copy()
+                n = position.index(tileRight)
+                switchRight[n], switchRight[self.tiles_len] = switchRight[self.tiles_len], switchRight[n]
+                if switchRight not in visited:
+                    queue.append((switchRight, direction_in_queue + 'U'))
+                    visited.append(switchRight)
+
+            position, direction_in_queue = queue.pop(0)
+            # print(position)
+            told = False
+            if position == solvedPuzzle.tiles and not told:
+                told = True
+                print(direction_in_queue)
+                # for dir in direction_in_queue:
+                #     print(dir)
+                # x, y = self.tiles[self.tiles_len]
+                # if dir == 'U':
+                #     self.switch((x, y+1))
+                # elif dir == 'D':
+                #     self.switch((x, y-1))
+                # elif dir == 'L':
+                #     self.switch((x+1, y))
+                # elif dir == 'R':
+                #     self.switch((x-1, y))
 
 
 def makeText(text, color, bgcolor, top, left):
@@ -309,9 +375,9 @@ def main():
         dt = fpsclock.tick()/1000
         if not is_solved:
             current_times = time.time()
-
-        TIMER_SURF, TIMER_RECT = makeText(
-            second_to_str(current_times - start_time), BLACK, WHITE, game_width - right_button*1.75, 5)
+        if not using_solved:
+            TIMER_SURF, TIMER_RECT = makeText(
+                second_to_str(current_times - start_time), BLACK, WHITE, game_width - right_button*1.75, 5)
 
         screen.fill(GAME_BACKGROUND)
         program.draw(screen)
