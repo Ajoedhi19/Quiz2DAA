@@ -259,7 +259,7 @@ class SlidePuzzle:
                 n = position.index(tileRight)
                 switchRight[n], switchRight[self.tiles_len] = switchRight[self.tiles_len], switchRight[n]
                 if switchRight not in visited:
-                    queue.append((switchRight, direction_in_queue + 'U'))
+                    queue.append((switchRight, direction_in_queue + 'R'))
                     visited.append(switchRight)
 
             position, direction_in_queue = queue.pop(0)
